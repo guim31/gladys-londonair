@@ -30,6 +30,19 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **No secret.** The London Air API is open: no account, no key, nothing to
+  store.
+- **`/data`** holds `londonair.json`: the public list of the London boroughs
+  and monitoring sites (names and coordinates) from the last bulletin, and for
+  each configured area its last indices and the last band the scene triggers
+  saw. Nothing personal.
+- **The house location** (Gladys `location` authorization) is read only when
+  the user clicks "Find an area" without a name, to sort the areas by
+  distance, locally; it is never sent, stored nor logged.
+- **Network**: HTTPS requests to `api.erg.ic.ac.uk` only. Nothing listens.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and the London Air services.

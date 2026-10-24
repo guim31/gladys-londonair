@@ -1,61 +1,164 @@
-# Demo Devices Template
+# London Air
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+London air quality from the [London Air Quality Network](https://www.londonair.org.uk)
+(LAQN), run by the Environmental Research Group of Imperial College London: the
+UK Daily Air Quality Index (DAQI) of each borough and each monitoring site,
+hour by hour, with the index of each pollutant.
 
-## What you get
+Not affiliated with London Air or Imperial College London. The data come from
+its open API (`api.erg.ic.ac.uk`), used as London Air publishes it.
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+## What it does
+
+- Reads the hourly London Air bulletin, with no account and no key: one
+  request every 30 or 60 minutes covers every borough and site.
+- Creates **one device per borough** (the worst index of its sites) and **one
+  device per monitoring site** you choose, 10 in all at most: the DAQI (1 to
+  10), its band as a word, the index of each pollutant measured (PM2.5, PM10,
+  NO₂, O₃, SO₂) and the age of the bulletin.
+- Adds a **London air quality** dashboard widget, two scene triggers (**air
+  pollution rising**, **back to low**) and a scene action **Get the air
+  quality**.
+- Finds a borough or a site by its name or code, or the nearest ones to your
+  house.
+
+Read only: the integration only reads public data.
+
+## Requirements
+
+- Gladys Assistant 5.2.0 or later.
+- Internet access from Gladys to `api.erg.ic.ac.uk`.
+- To search around your house: its location, in **Settings → Houses**.
 
 ## Configuration
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+### Choose the boroughs and sites
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+1. Open the integration's **Configuration** tab.
+2. Click **Find an area**: type a borough, a place or a site code (`Camden`,
+   `Marylebone`, `MY1`), or leave it empty to list the boroughs and sites
+   nearest to your house, with their distance.
+3. Type the boroughs you want into **Boroughs**, by name or number, separated
+   by commas (`Camden, Westminster`), and the sites into **Sites**, by code
+   (`CD1, MY1`). Save.
+4. In the **Discovery** tab, add them to Gladys.
 
-## Actions
+A borough sums up its area; a site, close to home or to a school, tells what
+you breathe there (a kerbside site on a main road reads much higher than a
+background site). The [London Air map](https://www.londonair.org.uk/) shows
+every site.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+### Other settings
+
+- **Refresh**: every 30 minutes (default) or every hour. London Air publishes
+  one bulletin per hour: reading more often would bring nothing.
+- **Language**: language of the feature names (set when a device is added, so
+  choose it first) and of the scene texts. French by default.
+
+The **Check the areas** button reads the bulletin now and tells what each
+borough and site gives, and which names or codes are not understood.
+
+## Devices
+
+One device per borough (`London Air <borough>`) or per site (`London Air
+<site name>`).
+
+| Feature                         | Values                                 |
+| ------------------------------- | -------------------------------------- |
+| Air quality index (DAQI)        | 1 to 10, the worst pollutant           |
+| Air pollution                   | the band as a word, in your language   |
+| PM2.5, PM10, NO₂, O₃, SO₂ index | 1 to 10, each pollutant                |
+| Bulletin age                    | minutes since the hour of the bulletin |
+
+Only the pollutants the site (or a site of the borough) measures are created.
+The hourly bulletin gives **indices, not concentrations**: each pollutant
+feature is its index on the same 1 to 10 scale.
+
+The **Daily Air Quality Index** of the UK has four bands: **Low** (1 to 3),
+**Moderate** (4 to 6), **High** (7 to 9) and **Very high** (10). The worst
+pollutant sets the index. A borough takes, pollutant by pollutant, the worst
+of its sites.
+
+A pollutant with "No data" keeps its last value for 3 hours (so that a gap does not
+fire the scenes), then publishes nothing. A bulletin older than 6 hours is
+no longer published as current: Gladys keeps the last values with their date,
+and the widget says the data are outdated.
+
+## Widget
+
+**London air quality**:
+
+- with a borough or site chosen: up to four pollutant tiles, the band colored
+  (green Low, orange Moderate, red High and Very high) and the age of the
+  bulletin;
+- without: one row per borough or site, its band colored.
 
 ## Scenes
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+### Trigger: London Air: air pollution rising
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+Fires when the band of a borough or site rises to **Moderate** or worse, or
+gets worse again (Moderate then High fires twice). A change within a band
+(4 then 5) fires nothing. Filters: the borough or site, and the **new band**:
+tick the bands from your threshold up (for example High and Very high).
+Information for the actions: name, band, index, previous index, the pollutant
+that sets the index, a ready-made summary.
 
-## Dashboard
+### Trigger: London Air: air pollution back to low
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+Fires when the band comes back to **Low** after a moderate or worse episode.
+Filters: the borough or site, and the worst band of the episode (tick the same
+bands as above to pair both scenes). Information: the new band and index, the
+worst band and index of the episode, a summary.
+
+The first index read after the installation sets the starting band and fires
+nothing; a restart does not fire the same change twice.
+
+### Action: London Air: get the air quality
+
+The air quality of one borough or site, or of the worst of the added ones:
+summary, band, index, pollutant, the index of each pollutant and the age of
+the bulletin, for the next actions (a message, a condition).
+
+## Scene examples
+
+- **Close the windows**: trigger _air pollution rising_ with the bands High and
+  Very high → send `{{triggerEvent.data.summary}}` and switch the ventilation
+  off.
+- **Air again**: trigger _back to low_ with the same bands → send "You can
+  open the windows again".
+- **School run**: at 7:45, action _get the air quality_ on the site near the
+  school, then send its summary.
+- **Purifier**: when the PM2.5 index of your borough reaches 4, switch the air
+  purifier on.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"No borough or site yet"** on the Configuration screen: type at least one
+  borough or site, or check the spelling with **Check the areas**.
+- **"no monitoring site in this borough"** or **"not in the London Air
+  bulletin"**: some boroughs have no site in the
+  hourly bulletin (Barnet, Bromley, the City of London… at the time of
+  writing), and a site may be out of service. **Find an area** lists the ones
+  that report, with their number of sites.
+- **"Not London Air boroughs"**: the name is not in the list; type it as **Find
+  an area** shows it, or its number.
+- **Pollutant indices without value**: the bulletin often says "No data" for
+  part of the pollutants of a site (last hour not received yet, analyser out
+  of service); the index then comes from the others.
+- **"The London Air API does not answer"**: the values are kept and read again
+  at the next refresh. The Logs tab tells the error once, and its end.
+- Details in the integration's **Logs** tab (`LOG_LEVEL=debug` for more).
+
+## Limits
+
+- Hourly bulletin: indices, not concentrations, and often "No data" for part
+  of the pollutants.
+- The bulletin arrives late: on 24 October 2026 at 10:40, the latest one
+  was that of 08:00. The bulletin age feature shows it.
+- These are measurements, not forecasts.
+- London Air publishes no rate limit: the integration makes one request every
+  30 or 60 minutes, whatever the number of areas, only while one of them is
+  added to Gladys.
+- The triggers follow the bands as published: a band that hesitates between
+  two values fires each change.

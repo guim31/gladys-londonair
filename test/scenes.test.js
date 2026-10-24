@@ -1,93 +1,54 @@
+// -----------------------------------------------------------------------------
+// The scene action "Get the air quality": one area, or the worst one.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { DEVICE_BLUEPRINTS } from '../src/devices/index.js';
-import { MOTION_DETECTED_TRIGGER, motionSensor } from '../src/devices/motionSensor.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
-import { normalizeConfig } from '../src/config.js';
+import { createAll, createWorld, discovered } from './helpers/world.js';
+import { MARYLEBONE, NORBURY, WESTMINSTER } from './helpers/network.js';
 
-const manifest = JSON.parse(
-  await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
-);
-const config = normalizeConfig();
-
-const declarationOf = (list, key) => manifest[list].find((entry) => entry.key === key);
-const keysOf = (list) => (list ?? []).map((entry) => entry.key);
-const deviceIdOf = (gladys, key) =>
-  DEVICE_BLUEPRINTS.find((bp) => bp.key === key).deviceExternalId(gladys);
-
-// Let the async interval callback run to completion.
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-test('the motion sensor fires one motion_detected event per detection, none on the clear', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'one detection, one event');
-    assert.equal(gladys.fake.sceneEvents[0].key, MOTION_DETECTED_TRIGGER);
-    assert.equal(gladys.fake.states.at(-1).state, 1, 'the state is still published');
-
-    t.mock.timers.tick(10_000);
-    await flush();
-    assert.equal(gladys.fake.states.at(-1).state, 0, 'the detection is cleared');
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'the clear fires no event');
-  } finally {
-    stopPush();
-  }
-});
-
-test('motion_detected data only carries keys the trigger declares', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-  } finally {
-    stopPush();
-  }
-  const [{ data }] = gladys.fake.sceneEvents;
-  const trigger = declarationOf('scene_triggers', MOTION_DETECTED_TRIGGER);
-  // The core keeps the `fields` keys (filters) and the `variables` keys
-  // (exposed to the scene): any other key would be silently dropped.
-  const declared = [...keysOf(trigger.fields), ...keysOf(trigger.variables)];
-  for (const [key, value] of Object.entries(data)) {
-    assert.ok(declared.includes(key), `data.${key} is not declared, the core would drop it`);
-    assert.ok(value === null || typeof value !== 'object', `data.${key} must be a primitive`);
-  }
-  // A `"source": "devices"` filter stores a device external_id.
-  assert.equal(data.device, deviceIdOf(gladys, 'motion-sensor'));
-  const targets = trigger.fields.find((field) => field.key === 'target').options;
-  assert.ok(
-    targets.some((option) => option.value === data.target),
-    `data.target "${data.target}" must be one of the filter options`,
-  );
-});
-
-test('identify_device signals the chosen device and returns the declared outputs', async () => {
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'light') },
-    config,
+async function world(language = 'fr') {
+  const w = await createWorld({
+    config: { boroughs: WESTMINSTER, sites: `${NORBURY} ${MARYLEBONE}`, language },
   });
-  assert.deepEqual(outputs, { signalled: true });
-  const declared = keysOf(declarationOf('scene_actions', 'identify_device').outputs);
-  for (const key of Object.keys(outputs)) {
-    assert.ok(declared.includes(key), `output "${key}" is not declared, the core would drop it`);
-  }
+  await createAll(w);
+  return w;
+}
+
+test('one area: its band, indices and a sentence', async () => {
+  const w = await world('en');
+  const ack = await w.gladys.fake.sceneAction('get_air_quality', {
+    area: discovered(w, '33').external_id,
+  });
+  assert.equal(ack.success, true, ack.error);
+  assert.deepEqual(ack.data.outputs ?? ack.data, {
+    area_name: 'London Air Westminster',
+    band: 'low',
+    band_label: 'Low',
+    index: 2,
+    pollutant: 'O₃',
+    pm25: 1,
+    pm10: 1,
+    no2: 1,
+    o3: 2,
+    age_minutes: 20,
+    summary: 'London Air Westminster: Low (2) · PM2.5 1 · PM10 1 · NO₂ 1 · O₃ 2',
+  });
 });
 
-test('identify_device reports a device that cannot signal itself through its output', async () => {
-  // Not a failure: a scene action is never a condition, the scene author
-  // gates the following actions on the output instead.
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'weather-station') },
-    config,
-  });
-  assert.deepEqual(outputs, { signalled: false });
+test('no area chosen: the worst index, the first configured on a tie', async () => {
+  const w = await world();
+  const ack = await w.gladys.fake.sceneAction('get_air_quality', {});
+  const outputs = ack.data.outputs ?? ack.data;
+  assert.equal(outputs.area_name, 'London Air Westminster');
+  assert.equal(outputs.band_label, 'Faible');
+  assert.equal(outputs.so2, undefined, 'no data: left out');
+});
+
+test('nothing recent: the action fails with a message in four languages', async () => {
+  const w = await world();
+  w.advance(7 * 3_600_000);
+  const ack = await w.gladys.fake.sceneAction('get_air_quality', {});
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /No air quality reading yet\. \/ Pas encore/);
 });

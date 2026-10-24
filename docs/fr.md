@@ -1,67 +1,175 @@
-# Template de démonstration
+# London Air
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+La qualité de l'air à Londres, par le [London Air Quality Network](https://www.londonair.org.uk)
+(LAQN), géré par l'Environmental Research Group de l'Imperial College London :
+l'indice britannique DAQI (Daily Air Quality Index) de chaque arrondissement
+(borough) et de chaque site de mesure, heure par heure, avec l'indice de
+chaque polluant.
 
-## Ce que vous obtenez
+Non affilié à London Air ni à l'Imperial College London. Les données viennent
+de son API ouverte (`api.erg.ic.ac.uk`), utilisées telles que London Air les
+publie.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce que fait l'intégration
+
+- Lit le bulletin horaire de London Air, sans compte ni clé : une requête toutes
+  les 30 ou 60 minutes couvre tous les arrondissements et sites.
+- Crée **un appareil par arrondissement** (le pire indice de ses sites) et **un
+  appareil par site de mesure** choisi, 10 en tout au plus : le DAQI (1 à 10),
+  sa bande en toutes lettres, l'indice de chaque polluant mesuré (PM2.5, PM10,
+  NO₂, O₃, SO₂) et l'âge du bulletin.
+- Ajoute un widget de tableau de bord **Qualité de l'air à Londres**, deux
+  déclencheurs de scène (**pollution de l'air en hausse**, **redevenue
+  faible**) et une action de scène **Lire la qualité de l'air**.
+- Trouve un arrondissement ou un site par son nom ou son code, ou les plus
+  proches de votre maison.
+
+Lecture seule : l'intégration ne fait que lire des données publiques.
+
+## Prérequis
+
+- Gladys Assistant 5.2.0 ou plus récent.
+- Un accès Internet de Gladys vers `api.erg.ic.ac.uk`.
+- Pour chercher autour de votre maison : sa position, dans **Paramètres →
+  Maisons**.
 
 ## Configuration
 
+### Choisir les arrondissements et les sites
+
 1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+2. Cliquez sur **Trouver une zone** : saisissez un arrondissement, un lieu ou
+   un code de site (`Camden`, `Marylebone`, `MY1`), ou laissez vide pour
+   lister les arrondissements et sites les plus proches de votre maison, avec
+   leur distance.
+3. Saisissez les arrondissements voulus dans **Arrondissements**, par nom ou
+   numéro, séparés par des virgules (`Camden, Westminster`), et les sites dans
+   **Sites**, par code (`CD1, MY1`). Enregistrez.
+4. Dans l'onglet **Découverte**, ajoutez-les à Gladys.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+Un arrondissement résume son secteur ; un site, près de chez vous ou d'une
+école, dit ce qu'on y respire (un site de bord de route sur un grand axe
+mesure bien plus haut qu'un site de fond). La [carte de London
+Air](https://www.londonair.org.uk/) montre tous les sites.
 
-## Actions
+### Autres réglages
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+- **Relevé** : toutes les 30 minutes (par défaut) ou toutes les heures. London
+  Air publie un bulletin par heure : lire plus souvent n'apporterait rien.
+- **Langue** : langue des noms de fonctionnalités (fixés à l'ajout d'un
+  appareil : choisissez-la d'abord) et des textes de scène. Français par
+  défaut.
+
+Le bouton **Vérifier les zones** lit le bulletin tout de suite et dit ce que
+donne chaque arrondissement et site, et quels noms ou codes ne sont pas
+compris.
+
+## Appareils
+
+Un appareil par arrondissement (`London Air <arrondissement>`) ou par site
+(`London Air <nom du site>`).
+
+| Fonctionnalité                    | Valeurs                                 |
+| --------------------------------- | --------------------------------------- |
+| Indice de qualité de l'air (DAQI) | 1 à 10, le pire polluant                |
+| Pollution de l'air                | la bande en toutes lettres, en français |
+| Indice PM2.5, PM10, NO₂, O₃, SO₂  | 1 à 10, chaque polluant                 |
+| Âge du bulletin                   | minutes depuis l'heure du bulletin      |
+
+Seuls les polluants mesurés par le site (ou par un site de l'arrondissement)
+sont créés. Le bulletin horaire donne **des indices, pas des
+concentrations** : chaque polluant est son indice, sur la même échelle de 1 à 10.
+
+L'**indice quotidien de qualité de l'air** britannique a quatre bandes :
+**Faible** (Low, 1 à 3), **Modéré** (Moderate, 4 à 6), **Élevé** (High, 7 à 9)
+et **Très élevé** (Very High, 10). Le pire polluant fixe l'indice. Un
+arrondissement prend, polluant par polluant, le pire de ses sites.
+
+Un polluant « No data » garde sa dernière valeur 3 heures (pour qu'un trou ne
+déclenche pas les scènes), puis ne publie plus rien. Un bulletin de plus de 6 heures n'est
+plus publié comme actuel : Gladys garde les dernières valeurs avec leur date,
+et le widget dit que les données sont périmées.
+
+## Widget
+
+**Qualité de l'air à Londres** :
+
+- avec un arrondissement ou un site choisi : jusqu'à quatre tuiles de
+  polluants, la bande colorée (vert Faible, orange Modéré, rouge Élevé et Très
+  élevé) et l'âge du bulletin ;
+- sans : une ligne par arrondissement ou site, sa bande colorée.
 
 ## Scènes
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+### Déclencheur : London Air : pollution de l'air en hausse
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+Se déclenche quand la bande d'un arrondissement ou d'un site passe à
+**Modéré** ou pire, ou s'aggrave encore (Modéré puis Élevé déclenche deux
+fois). Un changement à l'intérieur d'une bande (4 puis 5) ne déclenche rien.
+Filtres : l'arrondissement ou le site, et la **nouvelle bande** : cochez les
+bandes à partir de votre seuil (par exemple Élevé et Très élevé). Informations
+pour les actions : nom, bande, indice, indice précédent, le polluant qui fixe
+l'indice, un résumé tout fait.
 
-## Tableau de bord
+### Déclencheur : London Air : pollution de l'air redevenue faible
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Se déclenche quand la bande revient à **Faible** après un épisode modéré ou
+pire. Filtres : l'arrondissement ou le site, et la pire bande de l'épisode
+(cochez les mêmes bandes que ci-dessus pour apparier les deux scènes).
+Informations : la nouvelle bande et l'indice, la pire bande et le pire indice
+de l'épisode, un résumé.
+
+Le premier indice lu après l'installation fixe la bande de départ sans rien
+déclencher ; un redémarrage ne déclenche pas deux fois le même changement.
+
+### Action : London Air : lire la qualité de l'air
+
+La qualité de l'air d'un arrondissement ou d'un site, ou du pire de ceux
+ajoutés : résumé, bande, indice, polluant, l'indice de chaque polluant et
+l'âge du bulletin, pour les actions suivantes (un message, une condition).
+
+## Exemples de scènes
+
+- **Fermer les fenêtres** : déclencheur _pollution de l'air en hausse_ avec
+  les bandes Élevé et Très élevé → envoyer `{{triggerEvent.data.summary}}` et
+  couper la ventilation.
+- **On peut aérer** : déclencheur _redevenue faible_ avec les mêmes bandes →
+  envoyer « Vous pouvez rouvrir les fenêtres ».
+- **Trajet de l'école** : à 7 h 45, action _lire la qualité de l'air_ sur le
+  site près de l'école, puis envoyer son résumé.
+- **Purificateur** : quand l'indice PM2.5 de votre arrondissement atteint 4,
+  allumer le purificateur d'air.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Aucun arrondissement ni site »** sur l'écran de configuration : saisissez
+  au moins un arrondissement ou un site, ou vérifiez l'orthographe avec
+  **Vérifier les zones**.
+- **« aucun site de mesure dans cet arrondissement »** ou **« absent du
+  bulletin de London Air »** : certains arrondissements n'ont
+  aucun site dans le bulletin horaire (Barnet, Bromley, la City of London… au
+  moment où ces lignes sont écrites), et un site peut être hors service.
+  **Trouver une zone** liste ceux qui publient, avec leur nombre de sites.
+- **« Pas des arrondissements de London Air »** : le nom n'est pas dans la
+  liste ; saisissez-le comme **Trouver une zone** l'affiche, ou son numéro.
+- **Indices de polluants sans valeur** : le bulletin dit souvent « No data »
+  pour une partie des polluants d'un site (dernière heure pas encore reçue,
+  analyseur hors service) ; l'indice vient alors des autres.
+- **« L'API de London Air ne répond pas »** : les valeurs sont gardées et
+  relues au relevé suivant. L'onglet Journaux signale l'erreur une fois, et
+  son retour.
+- Détails dans l'onglet **Journaux** de l'intégration (`LOG_LEVEL=debug` pour
+  plus).
+
+## Limites
+
+- Bulletin horaire : des indices, pas des concentrations, et souvent « No
+  data » pour une partie des polluants.
+- Le bulletin arrive en retard : le 24 octobre 2026 à 10 h 40, le dernier
+  était celui de 8 h. La fonctionnalité « Âge du bulletin » le montre.
+- Ce sont des mesures, pas des prévisions.
+- London Air ne publie pas de limite de requêtes : l'intégration fait une
+  requête toutes les 30 ou 60 minutes, quel que soit le nombre de zones, et
+  seulement tant que l'une d'elles est ajoutée à Gladys.
+- Les déclencheurs suivent les bandes telles que publiées : une bande qui
+  hésite entre deux valeurs déclenche à chaque changement.
