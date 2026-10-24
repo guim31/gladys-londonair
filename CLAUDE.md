@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/app.test.js              # one file
+node --test --test-name-pattern "band"    # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -32,15 +32,23 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/app.js                        every handler, wired on a Gladys client (real or fake)
+src/api.js                        the London Air API: XML-shaped JSON to neutral objects
+src/time.js                       London Air dates (UK local time, no offset) to epoch ms
+src/catalog.js                    the last bulletin's boroughs and sites, name resolution, search
+src/hub.js                        records of the areas, reads, states, scene triggers
+src/poller.js                     the container's own timer (should_poll: false)
+src/devices.js                    one device per borough or site (buildDevice, feature keys)
+src/actions.js                    Configuration buttons (find an area, check the areas)
+src/scenes.js                     scene action handler (manifest `scene_actions`)
+src/widgets.js                    dashboard widget handler (manifest `widgets`)
+src/i18n.js                       every produced text, in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/store.js, src/issues.js       /data persistence, failures logged once
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+test/fixtures/londonair/          the real hourly bulletin recorded on 2026-10-24 (08:00 BST)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +78,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German ("du") and Spanish
+  ("usted"): action messages, manifest texts, widget and scene texts, feature
+  names, and `docs/{en,fr,de,es}.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +242,30 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## London Air (cette intégration)
+
+- **API** `https://api.erg.ic.ac.uk/AirQuality/` (Environmental Research Group, Imperial College
+  London), ouverte, sans clé, sans limite publiée. **Une seule requête** sert tout :
+  `Hourly/MonitoringIndex/GroupName=London/Json` (≈ 55 Ko, 33 arrondissements, ≈ 70 sites). Elle ne
+  donne que des **indices DAQI 1-10 par polluant**, pas de concentrations (il faudrait une requête par
+  site et par polluant, `Data/SiteSpecies/...`) : les polluants sont donc publiés en
+  `airquality-sensor/aqi` 0-10, nommés « Indice NO₂ »…
+- **JSON converti de XML** : attributs en chaînes `@…`, liste d'un seul élément = **objet seul**
+  (arrondissement à un site, site à un polluant), liste vide = **clé absente** (12 arrondissements sans
+  site le 24/10/2026 : Barnet, Bromley, City of London…). `asList()` dans `src/api.js`.
+- `@AirQualityIndex` `0` + `@AirQualityBand` `No data` = pas de donnée (très fréquent le matin) : rien
+  de publié. La bande est **recalculée depuis l'indice** (1-3 Low, 4-6 Moderate, 7-9 High, 10 Very High)
+  plutôt que lue. `@IndexSource` (`Measurement`/`Trigger`) est ignoré.
+- **Dates** `@BulletinDate` en heure locale britannique sans décalage, converties par la règle
+  BST (`src/time.js`). La date est celle du bulletin, la même pour tous les sites, même « No data ».
+- **Identifiants** : arrondissement par `@LocalAuthorityCode` (1-33, ordre alphabétique de la base
+  LAQN), site par `@SiteCode` (minuscules dans l'`external_id`). Les noms d'arrondissement saisis sont
+  résolus contre le dernier bulletin (gardé sous `/data` : un redémarrage hors ligne garde les appareils) ;
+  `prune` ne supprime rien tant que la liste est inconnue.
+- Arrondissement = pour chaque polluant, le **pire de ses sites** ; indice global = pire polluant (comme
+  londonair.org.uk).
+- Déclencheurs sur la **bande**, pas sur l'indice : `air_quality_degraded` à chaque montée de bande vers
+  Moderate ou pire (filtre `band`), `air_quality_back_to_normal` au retour à Low (filtre `worst_band`).
+  Un 4 → 5 ne déclenche rien. `announced`/`announcedLevel`/`worst` sous `/data`.
+- Pas de matériel : tout est testable contre l'API réelle, d'où la fixture enregistrée.

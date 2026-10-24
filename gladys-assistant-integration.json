@@ -1,177 +1,777 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "London Air",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "London air quality from London Air (Imperial College): DAQI index by borough and by site.",
+    "fr": "Qualité de l'air à Londres (London Air, Imperial College) : indice DAQI par arrondissement et site.",
+    "de": "Londoner Luftqualität von London Air (Imperial College): DAQI-Index pro Bezirk und Standort.",
+    "es": "Calidad del aire de Londres de London Air (Imperial College): índice DAQI por distrito y sitio."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-londonair:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-londonair/main/cover.png",
+  "categories": ["environment"],
+  "transports": ["cloud"],
+  "location": true,
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "London air quality",
+        "fr": "Qualité de l'air à Londres",
+        "de": "Luftqualität in London",
+        "es": "Calidad del aire en Londres"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Reads the hourly bulletin of the London Air Quality Network (Environmental Research Group, Imperial College London) through its open API, without account. Not affiliated with London Air or Imperial College London.",
+        "fr": "Lit le bulletin horaire du London Air Quality Network (Environmental Research Group, Imperial College London) par son API ouverte, sans compte. Non affilié à London Air ni à l'Imperial College London.",
+        "de": "Liest das stündliche Bulletin des London Air Quality Network (Environmental Research Group, Imperial College London) über seine offene API, ohne Konto. Nicht mit London Air oder dem Imperial College London verbunden.",
+        "es": "Lee el boletín horario de la London Air Quality Network (Environmental Research Group, Imperial College London) mediante su API abierta, sin cuenta. Sin afiliación con London Air ni con el Imperial College London."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://www.londonair.org.uk/",
+          "label": {
+            "en": "The London Air map",
+            "fr": "La carte de London Air",
+            "de": "Die London-Air-Karte",
+            "es": "El mapa de London Air"
+          }
+        },
+        {
+          "url": "https://api.erg.ic.ac.uk/AirQuality/help",
+          "label": {
+            "en": "The London Air API",
+            "fr": "L'API de London Air",
+            "de": "Die London-Air-API",
+            "es": "La API de London Air"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "boroughs",
+      "type": "string",
+      "label": {
+        "en": "Boroughs",
+        "fr": "Arrondissements",
+        "de": "Bezirke",
+        "es": "Distritos"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
-    },
-    {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
       "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+        "en": "London boroughs to follow, by name or number, separated by commas: one device each, with the worst index of its sites. \"Find an area\" below lists them.",
+        "fr": "Les arrondissements (boroughs) de Londres à suivre, par nom ou numéro, séparés par des virgules : un appareil chacun, avec le pire indice de ses sites. « Trouver une zone » ci-dessous les liste.",
+        "de": "Die Londoner Bezirke (Boroughs), nach Name oder Nummer, durch Kommas getrennt: je ein Gerät mit dem schlechtesten Index seiner Standorte. „Gebiet finden“ unten listet sie auf.",
+        "es": "Los distritos (boroughs) de Londres que desea seguir, por nombre o número, separados por comas: un dispositivo cada uno, con el peor índice de sus sitios. «Buscar una zona» más abajo los muestra."
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "placeholder": {
+        "en": "e.g. Camden, Westminster",
+        "fr": "ex. Camden, Westminster",
+        "de": "z. B. Camden, Westminster",
+        "es": "p. ej. Camden, Westminster"
+      },
       "required": false,
-      "default": "celsius",
+      "default": ""
+    },
+    {
+      "key": "sites",
+      "type": "string",
+      "label": {
+        "en": "Sites",
+        "fr": "Sites",
+        "de": "Standorte",
+        "es": "Sitios"
+      },
+      "description": {
+        "en": "Monitoring sites to follow, by their code, separated by commas: one device each. Boroughs and sites together: 10 at most.",
+        "fr": "Les sites de mesure à suivre, par leur code, séparés par des virgules : un appareil chacun. Arrondissements et sites ensemble : 10 au plus.",
+        "de": "Die Messstandorte, nach ihrem Code, durch Kommas getrennt: je ein Gerät. Bezirke und Standorte zusammen: höchstens 10.",
+        "es": "Los sitios de medición que desea seguir, por su código, separados por comas: un dispositivo cada uno. Distritos y sitios juntos: 10 como máximo."
+      },
+      "placeholder": {
+        "en": "e.g. CD1, MY1",
+        "fr": "ex. CD1, MY1",
+        "de": "z. B. CD1, MY1",
+        "es": "p. ej. CD1, MY1"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "refresh_minutes",
+      "type": "select",
+      "label": {
+        "en": "Refresh",
+        "fr": "Relevé",
+        "de": "Abruf",
+        "es": "Lectura"
+      },
+      "description": {
+        "en": "London Air publishes a bulletin every hour.",
+        "fr": "London Air publie un bulletin toutes les heures.",
+        "de": "London Air veröffentlicht jede Stunde ein Bulletin.",
+        "es": "London Air publica un boletín cada hora."
+      },
+      "required": false,
+      "default": "30",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "Every 30 minutes",
+            "fr": "Toutes les 30 minutes",
+            "de": "Alle 30 Minuten",
+            "es": "Cada 30 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "Every hour",
+            "fr": "Toutes les heures",
+            "de": "Jede Stunde",
+            "es": "Cada hora"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language",
+        "fr": "Langue",
+        "de": "Sprache",
+        "es": "Idioma"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Language of the feature names (set when a device is added) and of the scene texts.",
+        "fr": "Langue des noms de fonctionnalités (fixés à l'ajout d'un appareil) et des textes de scène.",
+        "de": "Sprache der Funktionsnamen (beim Hinzufügen eines Geräts festgelegt) und der Szenentexte.",
+        "es": "Idioma de los nombres de las funciones (fijados al añadir un dispositivo) y de los textos de escena."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "find_area",
+      "label": {
+        "en": "Find an area",
+        "fr": "Trouver une zone",
+        "de": "Gebiet finden",
+        "es": "Buscar una zona"
+      },
+      "timeout_seconds": 45,
       "fields": [
         {
-          "key": "device",
+          "key": "query",
+          "type": "string",
+          "label": {
+            "en": "Name or code",
+            "fr": "Nom ou code",
+            "de": "Name oder Code",
+            "es": "Nombre o código"
+          },
+          "description": {
+            "en": "A borough, a place or a site code. Empty: the nearest to the house.",
+            "fr": "Un arrondissement, un lieu ou un code de site. Vide : les plus proches de la maison.",
+            "de": "Ein Bezirk, ein Ort oder ein Standortcode. Leer: die dem Haus nächsten.",
+            "es": "Un distrito, un lugar o un código de sitio. Vacío: los más cercanos a la casa."
+          },
+          "placeholder": {
+            "en": "e.g. Camden",
+            "fr": "ex. Camden",
+            "de": "z. B. Camden",
+            "es": "p. ej. Camden"
+          },
+          "required": false
+        },
+        {
+          "key": "house",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "source": "houses",
+          "label": {
+            "en": "House",
+            "fr": "Maison",
+            "de": "Haus",
+            "es": "Casa"
+          },
+          "description": {
+            "en": "Sorts by distance. Its location is set in Settings → Houses. Empty: the first located house when no name is typed.",
+            "fr": "Trie par distance. Sa position se règle dans Paramètres → Maisons. Vide : la première maison située si aucun nom n'est saisi.",
+            "de": "Sortiert nach Entfernung. Sein Standort wird unter Einstellungen → Zuhause festgelegt. Leer: das erste Haus mit Standort, wenn kein Name eingegeben ist.",
+            "es": "Ordena por distancia. Su ubicación se define en Configuración → Viviendas. Vacío: la primera casa con ubicación si no escribe ningún nombre."
+          },
+          "required": false
         }
       ]
+    },
+    {
+      "key": "check_areas",
+      "label": {
+        "en": "Check the areas",
+        "fr": "Vérifier les zones",
+        "de": "Gebiete prüfen",
+        "es": "Comprobar las zonas"
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "air_quality_degraded",
+      "label": {
+        "en": "London Air: air pollution rising",
+        "fr": "London Air : pollution de l'air en hausse",
+        "de": "London Air: Luftverschmutzung steigt",
+        "es": "London Air: contaminación del aire en aumento"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The DAQI band of a borough or site rises to \"Moderate\" or worse, or gets worse again.",
+        "fr": "La bande DAQI d'un arrondissement ou d'un site passe à « Modéré » ou pire, ou s'aggrave encore.",
+        "de": "Das DAQI-Band eines Bezirks oder Standorts steigt auf „Mäßig“ oder schlechter, oder verschlechtert sich weiter.",
+        "es": "La banda DAQI de un distrito o sitio sube a «Moderado» o peor, o empeora de nuevo."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "area",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Borough or site",
+            "fr": "Arrondissement ou site",
+            "de": "Bezirk oder Standort",
+            "es": "Distrito o sitio"
+          },
+          "description": {
+            "en": "Empty: any borough or site.",
+            "fr": "Vide : tous les arrondissements et sites.",
+            "de": "Leer: jeder Bezirk und jeder Standort.",
+            "es": "Vacío: cualquier distrito o sitio."
+          },
+          "required": false
         },
         {
-          "key": "target",
+          "key": "band",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "New band",
+            "fr": "Nouvelle bande",
+            "de": "Neues Band",
+            "es": "Nueva banda"
+          },
+          "description": {
+            "en": "Tick the bands from your threshold up. Empty: any.",
+            "fr": "Cochez les bandes à partir de votre seuil. Vide : toutes.",
+            "de": "Wähle die Bänder ab deiner Schwelle. Leer: alle.",
+            "es": "Marque las bandas a partir de su umbral. Vacío: todas."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "moderate",
+              "label": {
+                "en": "Moderate (4-6)",
+                "fr": "Modéré (4-6)",
+                "de": "Mäßig (4-6)",
+                "es": "Moderado (4-6)"
+              }
+            },
+            {
+              "value": "high",
+              "label": {
+                "en": "High (7-9)",
+                "fr": "Élevé (7-9)",
+                "de": "Hoch (7-9)",
+                "es": "Alto (7-9)"
+              }
+            },
+            {
+              "value": "very_high",
+              "label": {
+                "en": "Very high (10)",
+                "fr": "Très élevé (10)",
+                "de": "Sehr hoch (10)",
+                "es": "Muy alto (10)"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "area_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Borough or site name",
+            "fr": "Nom de l'arrondissement ou du site",
+            "de": "Name des Bezirks oder Standorts",
+            "es": "Nombre del distrito o sitio"
+          }
+        },
+        {
+          "key": "band",
+          "type": "string",
+          "label": {
+            "en": "Band (key)",
+            "fr": "Bande (clé)",
+            "de": "Band (Schlüssel)",
+            "es": "Banda (clave)"
+          }
+        },
+        {
+          "key": "band_label",
+          "type": "string",
+          "label": {
+            "en": "Band",
+            "fr": "Bande",
+            "de": "Band",
+            "es": "Banda"
+          }
+        },
+        {
+          "key": "index",
+          "type": "number",
+          "label": {
+            "en": "Index, 1 to 10",
+            "fr": "Indice, de 1 à 10",
+            "de": "Index, 1 bis 10",
+            "es": "Índice, de 1 a 10"
+          }
+        },
+        {
+          "key": "previous_index",
+          "type": "number",
+          "label": {
+            "en": "Previous index",
+            "fr": "Indice précédent",
+            "de": "Vorheriger Index",
+            "es": "Índice anterior"
+          }
+        },
+        {
+          "key": "pollutant",
+          "type": "string",
+          "label": {
+            "en": "Pollutant setting the index",
+            "fr": "Polluant qui fixe l'indice",
+            "de": "Schadstoff, der den Index bestimmt",
+            "es": "Contaminante que fija el índice"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary",
+            "fr": "Résumé",
+            "de": "Zusammenfassung",
+            "es": "Resumen"
+          }
+        }
+      ]
+    },
+    {
+      "key": "air_quality_back_to_normal",
+      "label": {
+        "en": "London Air: air pollution back to low",
+        "fr": "London Air : pollution de l'air redevenue faible",
+        "de": "London Air: Luftverschmutzung wieder niedrig",
+        "es": "London Air: contaminación del aire de nuevo baja"
+      },
+      "description": {
+        "en": "The DAQI band of a borough or site comes back to \"Low\" (1 to 3) after a moderate or worse episode.",
+        "fr": "La bande DAQI d'un arrondissement ou d'un site revient à « Faible » (1 à 3) après un épisode modéré ou pire.",
+        "de": "Das DAQI-Band eines Bezirks oder Standorts kehrt nach einer mäßigen oder schlechteren Episode auf „Niedrig“ (1 bis 3) zurück.",
+        "es": "La banda DAQI de un distrito o sitio vuelve a «Bajo» (1 a 3) tras un episodio moderado o peor."
+      },
+      "fields": [
+        {
+          "key": "area",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Borough or site",
+            "fr": "Arrondissement ou site",
+            "de": "Bezirk oder Standort",
+            "es": "Distrito o sitio"
+          },
+          "description": {
+            "en": "Empty: any borough or site.",
+            "fr": "Vide : tous les arrondissements et sites.",
+            "de": "Leer: jeder Bezirk und jeder Standort.",
+            "es": "Vacío: cualquier distrito o sitio."
+          },
+          "required": false
+        },
+        {
+          "key": "worst_band",
+          "type": "multi_select",
+          "label": {
+            "en": "Worst band of the episode",
+            "fr": "Pire bande de l'épisode",
+            "de": "Schlechtestes Band der Episode",
+            "es": "Peor banda del episodio"
+          },
+          "description": {
+            "en": "Empty: any.",
+            "fr": "Vide : toutes.",
+            "de": "Leer: alle.",
+            "es": "Vacío: todas."
+          },
+          "options": [
+            {
+              "value": "moderate",
+              "label": {
+                "en": "Moderate (4-6)",
+                "fr": "Modéré (4-6)",
+                "de": "Mäßig (4-6)",
+                "es": "Moderado (4-6)"
+              }
+            },
+            {
+              "value": "high",
+              "label": {
+                "en": "High (7-9)",
+                "fr": "Élevé (7-9)",
+                "de": "Hoch (7-9)",
+                "es": "Alto (7-9)"
+              }
+            },
+            {
+              "value": "very_high",
+              "label": {
+                "en": "Very high (10)",
+                "fr": "Très élevé (10)",
+                "de": "Sehr hoch (10)",
+                "es": "Muy alto (10)"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "area_name",
+          "type": "string",
+          "label": {
+            "en": "Borough or site name",
+            "fr": "Nom de l'arrondissement ou du site",
+            "de": "Name des Bezirks oder Standorts",
+            "es": "Nombre del distrito o sitio"
+          }
+        },
+        {
+          "key": "band",
+          "type": "string",
+          "label": {
+            "en": "Band (key)",
+            "fr": "Bande (clé)",
+            "de": "Band (Schlüssel)",
+            "es": "Banda (clave)"
+          }
+        },
+        {
+          "key": "band_label",
+          "type": "string",
+          "label": {
+            "en": "Band",
+            "fr": "Bande",
+            "de": "Band",
+            "es": "Banda"
+          }
+        },
+        {
+          "key": "index",
+          "type": "number",
+          "label": {
+            "en": "Index, 1 to 10",
+            "fr": "Indice, de 1 à 10",
+            "de": "Index, 1 bis 10",
+            "es": "Índice, de 1 a 10"
+          }
+        },
+        {
+          "key": "worst_band",
+          "type": "string",
+          "label": {
+            "en": "Worst band (key)",
+            "fr": "Pire bande (clé)",
+            "de": "Schlechtestes Band (Schlüssel)",
+            "es": "Peor banda (clave)"
+          }
+        },
+        {
+          "key": "worst_band_label",
+          "type": "string",
+          "label": {
+            "en": "Worst band",
+            "fr": "Pire bande",
+            "de": "Schlechtestes Band",
+            "es": "Peor banda"
+          }
+        },
+        {
+          "key": "worst_index",
+          "type": "number",
+          "label": {
+            "en": "Worst index",
+            "fr": "Pire indice",
+            "de": "Schlechtester Index",
+            "es": "Peor índice"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary",
+            "fr": "Résumé",
+            "de": "Zusammenfassung",
+            "es": "Resumen"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "get_air_quality",
+      "label": {
+        "en": "London Air: get the air quality",
+        "fr": "London Air : lire la qualité de l'air",
+        "de": "London Air: Luftqualität abrufen",
+        "es": "London Air: obtener la calidad del aire"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "The DAQI of a borough or site, or of the worst one, for a notification.",
+        "fr": "Le DAQI d'un arrondissement ou d'un site, ou du pire, pour une notification.",
+        "de": "Der DAQI eines Bezirks oder Standorts, oder des schlechtesten, für eine Benachrichtigung.",
+        "es": "El DAQI de un distrito o sitio, o del peor, para una notificación."
+      },
+      "timeout_seconds": 10,
       "fields": [
         {
-          "key": "device",
+          "key": "area",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": {
+            "en": "Borough or site",
+            "fr": "Arrondissement ou site",
+            "de": "Bezirk oder Standort",
+            "es": "Distrito o sitio"
+          },
+          "description": {
+            "en": "Empty: the worst of the added ones.",
+            "fr": "Vide : le pire de ceux ajoutés.",
+            "de": "Leer: der schlechteste der hinzugefügten.",
+            "es": "Vacío: el peor de los añadidos."
+          },
+          "required": false
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary",
+            "fr": "Résumé",
+            "de": "Zusammenfassung",
+            "es": "Resumen"
+          }
+        },
+        {
+          "key": "area_name",
+          "type": "string",
+          "label": {
+            "en": "Borough or site name",
+            "fr": "Nom de l'arrondissement ou du site",
+            "de": "Name des Bezirks oder Standorts",
+            "es": "Nombre del distrito o sitio"
+          }
+        },
+        {
+          "key": "band_label",
+          "type": "string",
+          "label": {
+            "en": "Band",
+            "fr": "Bande",
+            "de": "Band",
+            "es": "Banda"
+          }
+        },
+        {
+          "key": "band",
+          "type": "string",
+          "label": {
+            "en": "Band (key)",
+            "fr": "Bande (clé)",
+            "de": "Band (Schlüssel)",
+            "es": "Banda (clave)"
+          }
+        },
+        {
+          "key": "index",
+          "type": "number",
+          "label": {
+            "en": "Index, 1 to 10",
+            "fr": "Indice, de 1 à 10",
+            "de": "Index, 1 bis 10",
+            "es": "Índice, de 1 a 10"
+          }
+        },
+        {
+          "key": "pollutant",
+          "type": "string",
+          "label": {
+            "en": "Pollutant setting the index",
+            "fr": "Polluant qui fixe l'indice",
+            "de": "Schadstoff, der den Index bestimmt",
+            "es": "Contaminante que fija el índice"
+          }
+        },
+        {
+          "key": "pm25",
+          "type": "number",
+          "label": {
+            "en": "PM2.5 index",
+            "fr": "Indice PM2.5",
+            "de": "PM2.5-Index",
+            "es": "Índice PM2.5"
+          }
+        },
+        {
+          "key": "pm10",
+          "type": "number",
+          "label": {
+            "en": "PM10 index",
+            "fr": "Indice PM10",
+            "de": "PM10-Index",
+            "es": "Índice PM10"
+          }
+        },
+        {
+          "key": "no2",
+          "type": "number",
+          "label": {
+            "en": "NO₂ index",
+            "fr": "Indice NO₂",
+            "de": "NO₂-Index",
+            "es": "Índice NO₂"
+          }
+        },
+        {
+          "key": "o3",
+          "type": "number",
+          "label": {
+            "en": "O₃ index",
+            "fr": "Indice O₃",
+            "de": "O₃-Index",
+            "es": "Índice O₃"
+          }
+        },
+        {
+          "key": "so2",
+          "type": "number",
+          "label": {
+            "en": "SO₂ index",
+            "fr": "Indice SO₂",
+            "de": "SO₂-Index",
+            "es": "Índice SO₂"
+          }
+        },
+        {
+          "key": "age_minutes",
+          "type": "number",
+          "label": {
+            "en": "Bulletin age, in minutes",
+            "fr": "Âge du bulletin, en minutes",
+            "de": "Alter des Bulletins, in Minuten",
+            "es": "Antigüedad del boletín, en minutos"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "air_quality",
+      "label": {
+        "en": "London air quality",
+        "fr": "Qualité de l'air à Londres",
+        "de": "Luftqualität in London",
+        "es": "Calidad del aire en Londres"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "DAQI band of your boroughs and sites, colored, with the pollutant indices.",
+        "fr": "Bande DAQI de vos arrondissements et sites, colorée, avec les indices des polluants.",
+        "de": "DAQI-Band deiner Bezirke und Standorte, eingefärbt, mit den Schadstoffindizes.",
+        "es": "Banda DAQI de sus distritos y sitios, coloreada, con los índices de los contaminantes."
+      },
+      "icon": "wind",
+      "settings": [
+        {
+          "key": "area",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Borough or site",
+            "fr": "Arrondissement ou site",
+            "de": "Bezirk oder Standort",
+            "es": "Distrito o sitio"
+          },
+          "description": {
+            "en": "Empty: one row per borough or site.",
+            "fr": "Vide : une ligne par arrondissement ou site.",
+            "de": "Leer: eine Zeile pro Bezirk oder Standort.",
+            "es": "Vacío: una fila por distrito o sitio."
+          },
+          "required": false
+        }
+      ]
     }
   ]
 }

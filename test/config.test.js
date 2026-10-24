@@ -1,33 +1,41 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import {
+  DEFAULT_CONFIG,
+  normalizeConfig,
+  parseBoroughs,
+  parseSiteCodes,
+  periodMs,
+} from '../src/config.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('the defaults read nothing, every 30 minutes, in French', () => {
+  const config = normalizeConfig();
+  assert.deepEqual(config.boroughs, []);
+  assert.deepEqual(config.siteCodes, []);
+  assert.equal(config.refreshMinutes, 30);
+  assert.equal(config.language, 'fr');
+  assert.equal(DEFAULT_CONFIG.language, 'fr');
+  assert.equal(periodMs(config), 1_800_000);
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('boroughs: commas or semicolons, names with spaces, duplicates dropped', () => {
+  assert.deepEqual(parseBoroughs(' Camden;  City of  London, camden, #33,, '), [
+    'Camden',
+    'City of London',
+    '33',
+  ]);
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('site codes: upper-cased, spaces or commas, the odd ones reported', () => {
+  assert.deepEqual(parseSiteCodes('my1, CD1 my1;bl0 a-b X'), {
+    valid: ['MY1', 'CD1', 'BL0'],
+    invalid: ['a-b', 'X'],
+  });
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('unknown refresh or language: the defaults', () => {
+  const config = normalizeConfig({ refresh_minutes: '5', language: 'it' });
+  assert.equal(config.refreshMinutes, 30);
+  assert.equal(config.language, 'fr');
+  assert.equal(normalizeConfig({ refresh_minutes: '60' }).refreshMinutes, 60);
 });
