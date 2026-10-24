@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-24
+
 ### Added
 
 - London boroughs and monitoring sites of the London Air Quality Network,
@@ -24,4 +26,5 @@ the notes of the version's GitHub Release.
   rising" (band filter) and "back to low", scene action "get the air quality".
 - Texts and documentation in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-londonair/commits/main
+[Unreleased]: https://github.com/guim31/gladys-londonair/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-londonair/releases/tag/v1.0.0
