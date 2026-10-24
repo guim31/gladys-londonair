@@ -42,9 +42,16 @@ export class Catalog {
     };
   }
 
-  /** A new bulletin. */
+  /**
+   * A new bulletin. A borough missing from one answer is kept, without site:
+   * its name still resolves, and its device is not pruned.
+   */
   update(boroughs, at) {
-    this.boroughs = boroughs;
+    const fresh = new Set(boroughs.map((borough) => borough.code));
+    const absent = this.boroughs
+      .filter((borough) => !fresh.has(borough.code))
+      .map((borough) => ({ ...borough, sites: [] }));
+    this.boroughs = [...boroughs, ...absent];
     this.fetchedAt = at;
   }
 

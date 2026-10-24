@@ -44,7 +44,7 @@ import { BANDS, BAND_KEYS, FORMULAS, MESSAGES, bandLabel, bandRank } from './i18
 const logger = createLogger({ name: 'areas' });
 
 /** Past this age, a bulletin is stale: not published, and the widget says so. */
-export const STALE_MINUTES = 180;
+export const STALE_MINUTES = 360;
 
 /** An unchanged value is published again this often (Gladys: "no recent value" past 48 h). */
 export const STATE_HEARTBEAT_MS = 6 * 60 * 60 * 1000;
@@ -54,7 +54,10 @@ export const STATE_HEARTBEAT_MS = 6 * 60 * 60 * 1000;
  * area was not read meanwhile (device added days after the configuration,
  * container stopped), and the next index starts afresh, without event.
  */
-const ANNOUNCED_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+const ANNOUNCED_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+/** A pollutant without data keeps its last value this long (bulletin time). */
+const HOLD_MS = 3 * 60 * 60 * 1000;
 
 /** From this band rank on, the air quality is degraded ("Moderate", DAQI 4). */
 export const DEGRADED_FROM = 1;
@@ -293,8 +296,12 @@ export class Hub {
     if (sites.length === 0) {
       // A borough without site, a site closed or offline: kept, stale soon.
       record.name ??= name;
-      this.lastResults.set(key, { ok: false, missing: true });
-      this.issues.fail(`area:${key}`, `${deviceName(record)}: not in the bulletin`);
+      const noSite = kind === KIND.BOROUGH && Boolean(name);
+      this.lastResults.set(key, { ok: false, missing: true, noSite });
+      this.issues.fail(
+        `area:${key}`,
+        `${deviceName(record)}: ${noSite ? 'no monitoring site in the bulletin' : 'not in the bulletin'}`,
+      );
       return;
     }
     const before = JSON.stringify({ index: this.indexOf(record), values: this.valuesOf(record) });
@@ -307,23 +314,45 @@ export class Hub {
       record.seen = true;
       this.devicesChanged = true;
     }
-    const species = {};
+    const times = sites.map((site) => site.at).filter((at) => typeof at === 'number');
+    const at = times.length > 0 ? Math.max(...times) : null;
+    // The last value of each pollutant of each site, kept through a few hours
+    // of "No data": a pollutant (or a site) missing for an hour must not read
+    // as an improvement, then a new degradation, and flap the scenes.
+    const held = record.held ?? {};
     for (const site of sites) {
+      const kept = (held[site.code] ??= {});
       for (const [pollutant, value] of Object.entries(site.species)) {
         this.learn(record, pollutant);
-        if (typeof value === 'number') {
-          species[pollutant] = Math.max(species[pollutant] ?? 0, value);
+        if (typeof value === 'number' && typeof site.at === 'number') {
+          kept[pollutant] = { value, at: site.at };
         }
       }
     }
-    const times = sites.map((site) => site.at).filter((at) => typeof at === 'number');
-    const at = times.length > 0 ? Math.max(...times) : null;
+    const species = {};
+    for (const [siteCode, kept] of Object.entries(held)) {
+      for (const [pollutant, item] of Object.entries(kept)) {
+        if (at === null || at - item.at > HOLD_MS) {
+          delete kept[pollutant];
+        } else {
+          species[pollutant] = Math.max(species[pollutant] ?? 0, item.value);
+        }
+      }
+      if (Object.keys(kept).length === 0) {
+        delete held[siteCode];
+      }
+    }
+    record.held = held;
     const values = Object.values(species);
     const level = values.length > 0 ? Math.max(...values) : null;
     const changed = record.at !== at || record.level !== level;
+    // The band reference holds while the area is read, whatever its data.
+    const continuous =
+      typeof record.readAt === 'number' && this.now() - record.readAt <= ANNOUNCED_MAX_AGE_MS;
+    record.readAt = this.now();
     Object.assign(record, { species, at, level });
     if (changed) {
-      this.applyLevel(record);
+      this.applyLevel(record, continuous);
     }
     if (JSON.stringify({ index: this.indexOf(record), values: this.valuesOf(record) }) !== before) {
       this.widgetChanged = true;
@@ -340,13 +369,16 @@ export class Hub {
     }
   }
 
-  /** A new index: evaluate the scene triggers. */
-  applyLevel(record) {
+  /**
+   * A new index: evaluate the scene triggers. `continuous`: the area was read
+   * recently, so the last band seen is still a reference.
+   */
+  applyLevel(record, continuous) {
     const index = this.indexOf(record);
     if (!index) {
       return;
     }
-    const event = this.bandEvent(record, index);
+    const event = this.bandEvent(record, index, continuous);
     if (event) {
       this.pendingEvents.set(record.id, event);
     }
@@ -354,18 +386,17 @@ export class Hub {
 
   /**
    * The scene event of a new index, if any. `announced` is the last band rank
-   * seen, `worst` the worst index of the ongoing degradation.
+   * seen, `worst` the worst index of the ongoing degradation. After a gap in
+   * the reads (device added days later, container stopped), the next index
+   * starts afresh, without event.
    */
-  bandEvent(record, index) {
-    const recent =
-      typeof record.announcedAt === 'number' &&
-      this.now() - record.announcedAt <= ANNOUNCED_MAX_AGE_MS;
-    const previous = recent ? record.announced : null;
-    const previousLevel = recent ? record.announcedLevel : null;
+  bandEvent(record, index, continuous) {
+    const known = continuous && typeof record.announced === 'number';
+    const previous = known ? record.announced : null;
+    const previousLevel = known ? record.announcedLevel : null;
     record.announced = index.rank;
     record.announcedLevel = index.level;
-    record.announcedAt = this.now();
-    if (previous === null || previous === undefined) {
+    if (previous === null) {
       record.worst = index.rank >= DEGRADED_FROM ? index.level : null;
       return null;
     }
@@ -470,7 +501,7 @@ export class Hub {
     if (event) {
       await this.gladys.publishSceneEvent(event.key, event.data);
       this.pendingEvents.delete(record.id);
-      logger.info(`${deviceName(record)}: air pollution ${event.data.band} (${event.data.index})`);
+      logger.debug(`${deviceName(record)}: air pollution ${event.data.band} (${event.data.index})`);
     }
     if (failure) {
       throw failure;

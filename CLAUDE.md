@@ -268,4 +268,12 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Déclencheurs sur la **bande**, pas sur l'indice : `air_quality_degraded` à chaque montée de bande vers
   Moderate ou pire (filtre `band`), `air_quality_back_to_normal` au retour à Low (filtre `worst_band`).
   Un 4 → 5 ne déclenche rien. `announced`/`announcedLevel`/`worst` sous `/data`.
+- **Retard du bulletin** : le 24/10/2026 à 10 h 40 (BST), le dernier bulletin était celui de 8 h
+  (2 h 40). D'où `STALE_MINUTES` à 6 h (au lieu des 3 h de gios) : à 3 h, les valeurs disparaissaient
+  par intermittence.
+- **« No data » par intermittence** (relecture) : une valeur par site et par polluant est gardée 3 h
+  (`held`, heure du bulletin), sinon un polluant dominant absent une heure faisait « retour à la
+  normale » puis « dégradé ». La référence des déclencheurs expire sur `readAt` (dernière lecture où
+  la zone figure), pas sur le dernier indice : une nuit sans donnée termine quand même l'épisode.
+  Un arrondissement absent d'une réponse reste dans le catalogue, sans site (pas d'élagage).
 - Pas de matériel : tout est testable contre l'API réelle, d'où la fixture enregistrée.

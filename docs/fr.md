@@ -85,7 +85,8 @@ L'**indice quotidien de qualité de l'air** britannique a quatre bandes :
 et **Très élevé** (Very High, 10). Le pire polluant fixe l'indice. Un
 arrondissement prend, polluant par polluant, le pire de ses sites.
 
-Un polluant « No data » ne publie rien. Un bulletin de plus de 3 heures n'est
+Un polluant « No data » garde sa dernière valeur 3 heures (pour qu'un trou ne
+déclenche pas les scènes), puis ne publie plus rien. Un bulletin de plus de 6 heures n'est
 plus publié comme actuel : Gladys garde les dernières valeurs avec leur date,
 et le widget dit que les données sont périmées.
 
@@ -144,7 +145,8 @@ l'âge du bulletin, pour les actions suivantes (un message, une condition).
 - **« Aucun arrondissement ni site »** sur l'écran de configuration : saisissez
   au moins un arrondissement ou un site, ou vérifiez l'orthographe avec
   **Vérifier les zones**.
-- **« absent du bulletin de London Air »** : certains arrondissements n'ont
+- **« aucun site de mesure dans cet arrondissement »** ou **« absent du
+  bulletin de London Air »** : certains arrondissements n'ont
   aucun site dans le bulletin horaire (Barnet, Bromley, la City of London… au
   moment où ces lignes sont écrites), et un site peut être hors service.
   **Trouver une zone** liste ceux qui publient, avec leur nombre de sites.
@@ -163,6 +165,8 @@ l'âge du bulletin, pour les actions suivantes (un message, une condition).
 
 - Bulletin horaire : des indices, pas des concentrations, et souvent « No
   data » pour une partie des polluants.
+- Le bulletin arrive en retard : le 24 octobre 2026 à 10 h 40, le dernier
+  était celui de 8 h. La fonctionnalité « Âge du bulletin » le montre.
 - Ce sont des mesures, pas des prévisions.
 - London Air ne publie pas de limite de requêtes : l'intégration fait une
   requête toutes les 30 ou 60 minutes, quel que soit le nombre de zones, et

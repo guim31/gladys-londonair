@@ -25,7 +25,7 @@ sensors: [`guim31/gladys-sensor-community`](https://github.com/guim31/gladys-sen
   **or per site**, 10 in all at most: the DAQI (1 low to 10 very high), its
   band as a word (Low, Moderate, High, Very high), the index of each pollutant
   measured (PM2.5, PM10, NO₂, O₃, SO₂) and the age of the bulletin. A bulletin
-  older than 3 hours is not published as current.
+  older than 6 hours is not published as current.
 - A **London air quality** dashboard widget (band colored, pollutant tiles),
   two scene triggers, **air pollution rising** (the band rises to "Moderate"
   or worse, the bands picked as filters) and **back to low**, and a scene

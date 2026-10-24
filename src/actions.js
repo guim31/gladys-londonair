@@ -85,6 +85,7 @@ export async function checkAreas(hub, poller, config) {
       pollutants: record ? pollutantsOf(record) : [],
       error: result && !result.ok && !result.missing ? result.error : null,
       missing: result?.missing === true,
+      noSite: result?.noSite === true,
     });
   });
   const unknown = hub.unknownBoroughs(config);

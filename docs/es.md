@@ -83,7 +83,8 @@ a 3), **Moderado** (Moderate, 4 a 6), **Alto** (High, 7 a 9) y **Muy alto**
 (Very High, 10). El peor contaminante fija el índice. Un distrito toma,
 contaminante por contaminante, el peor de sus sitios.
 
-Un contaminante «No data» no publica nada. Un boletín de más de 3 horas ya no
+Un contaminante «No data» conserva su último valor durante 3 horas (para que
+un hueco no active las escenas) y después ya no publica nada. Un boletín de más de 6 horas ya no
 se publica como actual: Gladys conserva los últimos valores con su fecha, y el
 widget indica que los datos están desactualizados.
 
@@ -141,7 +142,8 @@ condición).
 - **«Ningún distrito ni sitio»** en la pantalla de configuración: escriba al
   menos un distrito o un sitio, o compruebe la ortografía con **Comprobar las
   zonas**.
-- **«no figura en el boletín de London Air»**: algunos distritos no tienen
+- **«ningún sitio de medición en este distrito»** o **«no figura en el
+  boletín de London Air»**: algunos distritos no tienen
   ningún sitio en el boletín horario (Barnet, Bromley, la City of London… en
   el momento de escribir esto), y un sitio puede estar fuera de servicio.
   **Buscar una zona** muestra los que publican, con su número de sitios.
@@ -161,6 +163,8 @@ condición).
 
 - Boletín horario: índices, no concentraciones, y a menudo «No data» para una
   parte de los contaminantes.
+- El boletín llega con retraso: el 24 de octubre de 2026 a las 10:40, el
+  último era el de las 8:00. La función «Antigüedad del boletín» lo muestra.
 - Son mediciones, no previsiones.
 - London Air no publica ningún límite de solicitudes: la integración hace una
   solicitud cada 30 o 60 minutos, sea cual sea el número de zonas, y solo

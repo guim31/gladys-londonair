@@ -92,12 +92,12 @@ test('a device added again gets every state again, even unchanged', async () => 
 
 test('an old bulletin is never published as current', async () => {
   const w = await createWorld({ config: { sites: MARYLEBONE } });
-  w.advance(4 * HOUR); // London Air stuck on 08:00: 4 h 20 old
+  w.advance(7 * HOUR); // London Air stuck on 08:00: 7 h 20 old
   await createAll(w);
   const last = (key) => w.gladys.fake.lastState(featureId(w, MARYLEBONE, key));
   assert.equal(last('index'), undefined);
   assert.equal(last('o3'), undefined);
-  assert.equal(last('age'), 260);
+  assert.equal(last('age'), 440);
 });
 
 test('the bulletin date is UK time, summer or winter', async () => {
@@ -259,7 +259,7 @@ test('a borough without site, an unknown name or code: no device, and the check 
   const { data } = await w.gladys.fake.action('check_areas', {});
   const lines = data.message.en.split('\n');
   assert.deepEqual(lines.slice(0, 1), [
-    'London Air Barnet (2): not in the London Air bulletin (see "Find an area")',
+    'London Air Barnet (2): no monitoring site in this borough now, choose a site nearby',
   ]);
   assert.match(lines[1], /^London Air Kensington and Chelsea \(20\): Low \(\d+\), /);
   assert.equal(lines[2], 'ZZ9: not in the London Air bulletin (see "Find an area")');
@@ -346,4 +346,63 @@ test('an odd answer keeps the last values and says the API is failing', async ()
   await w.app.poller.cycle();
   assert.deepEqual(w.gladys.fake.connectionStatus.message, TEXT.apiUnreachable);
   assert.equal(w.gladys.fake.lastState(featureId(w, MARYLEBONE, 'index')), 2);
+});
+
+test('a pollutant gone "No data" for an hour neither improves nor degrades the band', async () => {
+  const w = await createWorld({ config: { sites: MARYLEBONE, language: 'en' } });
+  await createAll(w);
+  const step = async (hour, o3) => {
+    w.network.index = bulletinAt(`2026-10-24 ${hour}:00:00`, { MY1: { O3: o3 } });
+    w.advance(HOUR);
+    await w.app.poller.cycle();
+  };
+  await step('09', 5); // moderate
+  await step('10', 0); // O₃ "No data": the last value holds
+  await step('11', 5);
+  assert.deepEqual(
+    w.gladys.fake.sceneEvents.map((event) => event.key),
+    ['air_quality_degraded'],
+  );
+  assert.equal(w.gladys.fake.lastState(featureId(w, MARYLEBONE, 'index')), 5);
+  // Past 3 h without data, the value is dropped.
+  await step('12', 0);
+  await step('13', 0);
+  await step('14', 0);
+  await step('15', 0);
+  assert.equal(w.app.hub.indexOf(w.app.hub.records.get('site:MY1')), null);
+});
+
+test('a long night without data still ends the episode with an event', async () => {
+  const w = await createWorld({ config: { sites: MARYLEBONE, language: 'en' } });
+  await createAll(w);
+  w.network.index = bulletinAt('2026-10-24 09:00:00', { MY1: { O3: 5 } });
+  w.advance(HOUR);
+  await w.app.poller.cycle();
+  for (let hour = 10; hour < 20; hour += 1) {
+    w.network.index = bulletinAt(`2026-10-24 ${hour}:00:00`, { MY1: { O3: 0 } });
+    w.advance(HOUR);
+    await w.app.poller.cycle();
+  }
+  w.network.index = bulletinAt('2026-10-24 20:00:00', { MY1: { O3: 2 } });
+  w.advance(HOUR);
+  await w.app.poller.cycle();
+  assert.deepEqual(
+    w.gladys.fake.sceneEvents.map((event) => event.key),
+    ['air_quality_degraded', 'air_quality_back_to_normal'],
+  );
+});
+
+test('a borough missing from one answer keeps its device and its name', async () => {
+  const w = await createWorld({ config: { boroughs: WESTMINSTER } });
+  await createAll(w);
+  const partial = bulletinAt('2026-10-24 08:00:00');
+  partial.HourlyAirQualityIndex.LocalAuthority =
+    partial.HourlyAirQualityIndex.LocalAuthority.filter(
+      (authority) => authority['@LocalAuthorityCode'] !== '33',
+    );
+  w.network.index = partial;
+  w.advance(HOUR);
+  await w.app.poller.cycle();
+  assert.deepEqual(w.app.hub.units(), ['borough:33']);
+  assert.equal(discovered(w, '33').name, 'London Air Westminster');
 });

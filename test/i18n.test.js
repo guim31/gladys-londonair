@@ -158,7 +158,8 @@ test('the texts built from values exist in every language', () => {
     unknownBoroughs: MESSAGES.unknownBoroughs(['Paris']),
     invalidSites: MESSAGES.invalidSites(['a-b']),
     tooMany: MESSAGES.tooMany(10),
-    checkMissing: MESSAGES.checkArea({ head: 'London Air Barnet (2)', missing: true }),
+    checkMissing: MESSAGES.checkArea({ head: 'ZZ9', missing: true }),
+    checkNoSite: MESSAGES.checkArea({ head: 'London Air Barnet (2)', noSite: true }),
     check: MESSAGES.checkArea({
       head: 'London Air Camden (6)',
       level: 2,

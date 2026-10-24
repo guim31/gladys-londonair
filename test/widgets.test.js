@@ -83,10 +83,10 @@ test('every area: one row each, colored by band', async () => {
 
 test('stale data and an unknown area are said plainly', async () => {
   const w = await world();
-  w.advance(5 * 3_600_000);
+  w.advance(7 * 3_600_000);
   const c = await content(w, { area: discovered(w, NORBURY).external_id }, 'de');
   const status = c.components.find((x) => x.type === 'status');
-  assert.equal(status.items[0].value, 'Veraltet (5 Std.)');
+  assert.equal(status.items[0].value, 'Veraltet (7 Std.)');
   assert.equal(status.items[0].color, WIDGET_COLORS.NEUTRAL);
   const gone = await content(w, { area: 'ext:test-integration:site:zz9' }, 'es');
   assert.equal(gone.components[0].text, TEXT.unknownArea.es);
@@ -102,4 +102,19 @@ test('the colors of the four bands', () => {
     WIDGET_COLORS.DANGER,
     WIDGET_COLORS.DANGER,
   ]);
+});
+
+test('no tile for a pollutant the Gladys device does not have yet', async () => {
+  const w = await world();
+  const device = w.gladys.fake.discoveredDevices.find((d) => d.external_id.endsWith(':my1'));
+  const old = {
+    ...device,
+    features: device.features.filter((f) => !f.external_id.endsWith(':o3')),
+  };
+  await w.gladys.fake.deviceCreated(old);
+  const c = await content(w, { area: device.external_id }, 'en');
+  assert.deepEqual(
+    c.components.filter((x) => x.type === 'value').map((x) => x.label),
+    ['NO₂', 'SO₂'],
+  );
 });

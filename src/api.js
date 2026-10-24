@@ -20,7 +20,7 @@ export const API_URL = 'https://api.erg.ic.ac.uk/AirQuality';
 
 export const INDEX_PATH = '/Hourly/MonitoringIndex/GroupName=London/Json';
 
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 20_000;
 
 const USER_AGENT = 'gladys-londonair (+https://github.com/guim31/gladys-londonair)';
 

@@ -87,8 +87,9 @@ hoch** (Very High, 10). Der schlechteste Schadstoff bestimmt den Index. Ein
 Bezirk übernimmt, Schadstoff für Schadstoff, den schlechtesten seiner
 Standorte.
 
-Ein Schadstoff mit „No data“ veröffentlicht nichts. Ein Bulletin, das älter
-als 3 Stunden ist, wird nicht mehr als aktuell veröffentlicht: Gladys behält
+Ein Schadstoff mit „No data“ behält seinen letzten Wert 3 Stunden lang (damit
+eine Lücke keine Szenen auslöst) und veröffentlicht danach nichts mehr. Ein Bulletin, das älter
+als 6 Stunden ist, wird nicht mehr als aktuell veröffentlicht: Gladys behält
 die letzten Werte mit ihrem Datum, und das Widget meldet veraltete Daten.
 
 ## Widget
@@ -147,7 +148,8 @@ Nachricht, eine Bedingung).
 - **„Noch kein Bezirk und kein Standort“** auf dem Konfigurationsbildschirm:
   Trage mindestens einen Bezirk oder Standort ein, oder prüfe die Schreibweise
   mit **Gebiete prüfen**.
-- **„nicht im London-Air-Bulletin“**: Manche Bezirke haben keinen Standort im
+- **„kein Messstandort in diesem Bezirk“** oder **„nicht im
+  London-Air-Bulletin“**: Manche Bezirke haben keinen Standort im
   stündlichen Bulletin (Barnet, Bromley, die City of London… zum Zeitpunkt
   dieser Doku), und ein Standort kann außer Betrieb sein. **Gebiet finden**
   listet die, die melden, mit ihrer Anzahl an Standorten.
@@ -166,6 +168,8 @@ Nachricht, eine Bedingung).
 
 - Stündliches Bulletin: Indizes, keine Konzentrationen, und oft „No data“ für
   einen Teil der Schadstoffe.
+- Das Bulletin kommt verspätet: Am 24. Oktober 2026 um 10:40 war das neueste
+  das von 8:00. Die Funktion „Alter des Bulletins“ zeigt es.
 - Es sind Messungen, keine Vorhersagen.
 - London Air veröffentlicht kein Anfragelimit: Die Integration stellt alle 30
   oder 60 Minuten eine Anfrage, unabhängig von der Zahl der Gebiete, und nur

@@ -215,9 +215,17 @@ export const MESSAGES = {
 
   /**
    * One line of the "Check the areas" report.
-   * @param {{ head: string, level?: number|null, minutes?: number|null, pollutants?: string[], error?: string|null, missing?: boolean }} options
+   * @param {{ head: string, level?: number|null, minutes?: number|null, pollutants?: string[], error?: string|null, missing?: boolean, noSite?: boolean }} options
    */
-  checkArea({ head, level, minutes, pollutants = [], error, missing }) {
+  checkArea({ head, level, minutes, pollutants = [], error, missing, noSite }) {
+    if (noSite) {
+      return {
+        en: `${head}: no monitoring site in this borough now, choose a site nearby`,
+        fr: `${head} : aucun site de mesure dans cet arrondissement, choisissez un site proche`,
+        de: `${head}: derzeit kein Messstandort in diesem Bezirk, wähle einen Standort in der Nähe`,
+        es: `${head}: ningún sitio de medición en este distrito, elija un sitio cercano`,
+      };
+    }
     if (missing) {
       return {
         en: `${head}: not in the London Air bulletin (see "Find an area")`,

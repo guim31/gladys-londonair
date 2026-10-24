@@ -47,7 +47,7 @@ test('no area chosen: the worst index, the first configured on a tie', async () 
 
 test('nothing recent: the action fails with a message in four languages', async () => {
   const w = await world();
-  w.advance(5 * 3_600_000);
+  w.advance(7 * 3_600_000);
   const ack = await w.gladys.fake.sceneAction('get_air_quality', {});
   assert.equal(ack.success, false);
   assert.match(ack.error, /No air quality reading yet\. \/ Pas encore/);

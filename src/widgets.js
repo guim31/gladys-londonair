@@ -75,7 +75,15 @@ export function buildAirQualityContent({ hub, gladys, settings = {}, language = 
       };
     }
     const ids = idsOf(gladys, record.id);
+    // A pollutant learnt after the device was added has no feature in Gladys
+    // until the user updates the device: no tile bound to nothing.
+    const features = (gladys.devices ?? []).find(
+      (device) => device.external_id === ids.device,
+    )?.features;
+    const has = (key) =>
+      !Array.isArray(features) || features.some((f) => f.external_id === ids.feature(key));
     const tiles = pollutantsOf(record)
+      .filter(has)
       .slice(0, MAX_TILES)
       .map((key) => ({ type: 'value', label: FORMULAS[key], device_feature: ids.feature(key) }));
     const minutes = hub.ageMinutes(record);

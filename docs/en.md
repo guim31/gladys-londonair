@@ -79,7 +79,8 @@ The **Daily Air Quality Index** of the UK has four bands: **Low** (1 to 3),
 pollutant sets the index. A borough takes, pollutant by pollutant, the worst
 of its sites.
 
-A pollutant with "No data" publishes nothing. A bulletin older than 3 hours is
+A pollutant with "No data" keeps its last value for 3 hours (so that a gap does not
+fire the scenes), then publishes nothing. A bulletin older than 6 hours is
 no longer published as current: Gladys keeps the last values with their date,
 and the widget says the data are outdated.
 
@@ -135,7 +136,8 @@ the bulletin, for the next actions (a message, a condition).
 
 - **"No borough or site yet"** on the Configuration screen: type at least one
   borough or site, or check the spelling with **Check the areas**.
-- **"not in the London Air bulletin"**: some boroughs have no site in the
+- **"no monitoring site in this borough"** or **"not in the London Air
+  bulletin"**: some boroughs have no site in the
   hourly bulletin (Barnet, Bromley, the City of London… at the time of
   writing), and a site may be out of service. **Find an area** lists the ones
   that report, with their number of sites.
@@ -152,6 +154,8 @@ the bulletin, for the next actions (a message, a condition).
 
 - Hourly bulletin: indices, not concentrations, and often "No data" for part
   of the pollutants.
+- The bulletin arrives late: on 24 October 2026 at 10:40, the latest one
+  was that of 08:00. The bulletin age feature shows it.
 - These are measurements, not forecasts.
 - London Air publishes no rate limit: the integration makes one request every
   30 or 60 minutes, whatever the number of areas, only while one of them is
