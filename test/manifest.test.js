@@ -263,3 +263,8 @@ test('field placeholders are multi-language objects', () => {
     assert.ok(field.placeholder.en, `field "${field.key}": placeholder needs an English text`);
   }
 });
+
+test('the catalog countries: the United Kingdom, which needs Gladys >= 5.3.0', () => {
+  assert.deepEqual(manifest.countries, ['GB']);
+  assert.ok(isAtLeast(minGladysVersion(), [5, 3, 0]), 'countries needs Gladys 5.3.0');
+});

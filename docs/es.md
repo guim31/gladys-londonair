@@ -28,7 +28,7 @@ Solo lectura: la integración solo lee datos públicos.
 
 ## Requisitos
 
-- Gladys Assistant 5.2.0 o posterior.
+- Gladys Assistant 5.3.0 o posterior.
 - Acceso a Internet desde Gladys hacia `api.erg.ic.ac.uk`.
 - Para buscar alrededor de su casa: su ubicación, en **Configuración →
   Viviendas**.
