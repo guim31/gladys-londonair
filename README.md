@@ -41,7 +41,7 @@ the **Documentation** link of the Configuration screen.
 
 ## Requirements
 
-- Gladys Assistant **5.2.0** or later (the area search uses the house picker
+- Gladys Assistant **5.3.0** or later (the catalog countries need 5.3.0; the area search uses the house picker
   of 5.2.0; the widget and the scene cards need 5.1).
 - Internet access to `api.erg.ic.ac.uk`.
 
