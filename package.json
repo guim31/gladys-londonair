@@ -1,6 +1,6 @@
 {
   "name": "gladys-londonair",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Gladys Assistant external integration for the London Air Quality Network (London Air, Imperial College London).",
   "type": "module",
